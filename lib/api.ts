@@ -35,6 +35,54 @@ export interface Conversation {
   updated_at: string;
 }
 
+//  PERFIL DO USUÁRIO
+export async function getProfile(token: string) {
+  const response = await fetch(`${API_URL}/user/profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!response.ok) throw new Error("Erro ao buscar perfil")
+  return response.json()
+}
+
+export async function updateProfile(token: string, data: { name?: string; email?: string; avatar_url?: string }) {
+  const response = await fetch(`${API_URL}/user/profile`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+  if (!response.ok) throw new Error("Erro ao atualizar perfil")
+  return response.json()
+}
+
+export async function updatePassword(token: string, newPassword: string) {
+  const response = await fetch(`${API_URL}/user/password`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ new_password: newPassword }),
+  })
+  if (!response.ok) throw new Error("Erro ao atualizar senha")
+  return response.json()
+}
+
+export async function uploadAvatar(token: string, file: File) {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const response = await fetch(`${API_URL}/user/avatar`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+  if (!response.ok) throw new Error("Erro ao enviar avatar")
+  return response.json()
+}
+
 // Conversas
 export async function getConversations(): Promise<Conversation[]> {
   const res = await fetch(`${API_URL}/chat/conversations`, { headers: getAuthHeaders() });
@@ -42,7 +90,7 @@ export async function getConversations(): Promise<Conversation[]> {
   return res.json();
 }
 
-export async function createConversation(p0: { title: string; }): Promise<Conversation> {
+export async function createConversation(): Promise<Conversation> {
   const res = await fetch(`${API_URL}/chat/conversations`, {
     method: "POST",
     headers: getAuthHeaders(),

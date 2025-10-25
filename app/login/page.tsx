@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { MessageSquare } from "lucide-react"
+import { Sparkles, Bug } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -29,15 +29,15 @@ export default function LoginPage() {
       await login(email, password)
       toast({
         title: "Login realizado com sucesso!",
-        description: "Bem-vindo de volta.",
+        description: "Bem-vindo",
       })
+
       router.push("/chat")
     } catch (error) {
       toast({
         title: "Erro no login",
         description: error instanceof Error ? error.message : "Verifique suas credenciais e tente novamente.",
         variant: "destructive",
-  className: "text-white",
       })
     } finally {
       setIsLoading(false)
@@ -45,19 +45,33 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-primary/20 blur-3xl animate-pulse" 
+             style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-accent/20 blur-3xl animate-pulse" 
+             style={{ animationDuration: '6s', animationDelay: '1s' }} />
+        <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full bg-secondary/15 blur-3xl animate-pulse" 
+             style={{ animationDuration: '5s', animationDelay: '2s' }} />
+      </div>
+
+      <Card className="w-full max-w-md glass-strong shimmer relative z-10 border-2">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-            <MessageSquare className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Bem-vindo de volta</CardTitle>
-          <CardDescription>Entre com sua conta para continuar conversando</CardDescription>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg glow">
+            <Bug className="h-8 w-8 text-primary-foreground" />
+        </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Debug.AI
+          </CardTitle>
+          <CardDescription className="text-base">
+            Bem-vondo de volta, entre com sua conta para continuar conversando
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -66,10 +80,11 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
+                className="glass h-12 transition-all focus:scale-[1.02]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -78,16 +93,31 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                className="glass h-12 transition-all focus:scale-[1.02]"
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Entrando..." : "Entrar"}
+            <Button 
+              type="submit" 
+              className="mt-4 w-full h-12 bg-gradient-to-r from-primary to-accent hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group relative overflow-hidden" 
+              disabled={isLoading}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {isLoading ? (
+                  <>
+                    <Sparkles className="h-4 w-4 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  "Entrar"
+                )}
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               Não tem uma conta?{" "}
-              <Link href="/signup" className="font-medium text-primary hover:underline">
+              <Link href="/signup" className="font-medium text-primary hover:text-accent transition-colors hover:underline">
                 Criar conta
               </Link>
             </p>

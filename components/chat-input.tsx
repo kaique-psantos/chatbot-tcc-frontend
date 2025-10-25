@@ -1,9 +1,8 @@
-"use client"
-
-import { useState, type KeyboardEvent } from "react"
+// components/chat-input.tsx
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send } from "lucide-react"
+import { Send, Sparkles } from "lucide-react"
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -13,41 +12,48 @@ interface ChatInputProps {
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [message, setMessage] = useState("")
 
-  const handleSend = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
     if (message.trim() && !disabled) {
-      onSend(message.trim())
+      onSend(message)
       setMessage("")
     }
   }
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+      handleSubmit(e)
     }
   }
 
   return (
-    <div className="border-t bg-background p-4">
-      <div className="mx-auto flex max-w-4xl gap-2">
+    <form onSubmit={handleSubmit} className="relative">
+      <div className="glass-strong rounded-3xl p-2 flex gap-2 items-end border-2">
         <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Digite sua mensagem..."
-          className="min-h-[60px] max-h-[200px] resize-none"
           disabled={disabled}
+          className="min-h-[50px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 px-4 shadow-none"
         />
         <Button
-          onClick={handleSend}
-          disabled={!message.trim() || disabled}
+          type="submit"
           size="icon"
-          className="h-[60px] w-[60px] shrink-0"
+          disabled={disabled || !message.trim()}
+          className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-accent hover:shadow-xl transition-all duration-300 hover:scale-110 shrink-0 group relative overflow-hidden"
         >
-          <Send className="h-5 w-5" />
-          <span className="sr-only">Enviar mensagem</span>
+          <span className="relative z-10">
+            {disabled ? (
+              <Sparkles className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </span>
+          <div className="absolute inset-0 bg-gradient-to-br from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </Button>
       </div>
-    </div>
+    </form>
   )
 }

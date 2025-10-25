@@ -9,6 +9,7 @@ import { ChatHeader } from "@/components/chat-header"
 import { ConversationSidebar } from "@/components/conversation-sidebar"
 import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
+import { Bug } from "lucide-react"
 import {
   sendMessage,
   getMessages,
@@ -30,7 +31,7 @@ export default function ChatPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [showWelcome, setShowWelcome] = useState(true) // ✅ tela de boas-vindas
+  const [showWelcome, setShowWelcome] = useState(true)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -41,30 +42,32 @@ export default function ChatPage() {
     }
   }, [user, authLoading, router])
 
-  // Carrega conversas ao montar
+  // Carrega conversas
   useEffect(() => {
     if (user) {
       loadConversations()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
-  // Auto-scroll
+  // Scroll automático ao fim
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  // =============================
+  // FUNÇÕES DE CONVERSAS
+  // =============================
 
   const loadConversations = async () => {
     try {
       const data = await getConversations()
       setConversations(data)
 
-      // Cria nova conversa se não houver
-      if (!currentConversation && data.length === 0) {
-        await handleNewConversation()
-      } else if (!currentConversation && data.length > 0) {
-        // Não inicia última conversa: mantemos showWelcome true
-        setCurrentConversation(null)
-      }
+      // não abrir automaticamente nenhuma conversa — mantém showWelcome
+      setCurrentConversation(null)
+      setMessages([])
+      setShowWelcome(true)
     } catch (error) {
       console.error("[v0] Error loading conversations:", error)
       toast({
@@ -82,7 +85,7 @@ export default function ChatPage() {
     try {
       const data = await getMessages(conversation.id)
       setMessages(data)
-      setShowWelcome(false) // Desativa welcome se carregar conversa existente
+      setShowWelcome(false)
     } catch (error) {
       console.error("[v0] Error loading messages:", error)
       toast({
@@ -97,13 +100,13 @@ export default function ChatPage() {
 
   const handleNewConversation = async () => {
     try {
-      const newConversation = await createConversation({ title: "Nova Conversa" })
-      setConversations([newConversation, ...conversations])
+      const newConversation = await createConversation()
+      setConversations((prev) => [newConversation, ...prev])
       setCurrentConversation(newConversation)
       setMessages([])
-      setShowWelcome(true) // Ativa tela de boas-vindas
+      setShowWelcome(true)
     } catch (error) {
-      console.error("[v0] Error creating conversation:", error)
+      console.error("Error creating conversation:", error)
       toast({
         title: "Erro",
         description: "Não foi possível criar uma nova conversa.",
@@ -122,7 +125,10 @@ export default function ChatPage() {
         if (updatedConversations.length > 0) {
           await loadConversation(updatedConversations[0])
         } else {
-          await handleNewConversation()
+          // volta ao estado inicial sem conversa
+          setCurrentConversation(null)
+          setMessages([])
+          setShowWelcome(true)
         }
       }
 
@@ -140,25 +146,28 @@ export default function ChatPage() {
     }
   }
 
+  // =============================
+  // ENVIO DE MENSAGEM
+  // =============================
+
   const handleSendMessage = async (content: string) => {
-    // Desativa welcome
+    // esconde welcome assim que o usuário começa a digitar/enviar
     if (showWelcome) setShowWelcome(false)
 
-    // Cria conversa se não houver
     let conversation = currentConversation
     if (!conversation) {
+      // cria conversa localmente se não existir
       try {
-        conversation = await createConversation({ title: "Nova Conversa" })
-        setConversations([conversation, ...conversations])
+        conversation = await createConversation()
+        setConversations((prev) => [conversation!, ...prev])
         setCurrentConversation(conversation)
-        setMessages([]) // inicia lista de mensagens vazia
+        setMessages([])
       } catch (error) {
         console.error("Erro ao criar nova conversa:", error)
         toast({
           title: "Erro",
           description: "Não foi possível criar a conversa.",
           variant: "destructive",
-          className: "text-white",
         })
         return
       }
@@ -175,47 +184,52 @@ export default function ChatPage() {
       created_at: new Date().toISOString(),
     }
 
-    setMessages([...messages, userMessage])
+    // mostra imediatamente a mensagem do usuário
+    setMessages((prev) => [...prev, userMessage])
     setIsSending(true)
 
     try {
-      const response = await sendMessage(conversation.id, content)
+      const response = await sendMessage(conversation.id, content, isFirstMessage)
 
+      // substitui temp e adiciona resposta
       setMessages((prev) => [
         ...prev.filter((m) => m.id !== userMessage.id),
         userMessage,
         response,
       ])
 
+      // Atualiza o título localmente na primeira mensagem
       if (isFirstMessage) {
         setConversations((prev) =>
-          prev.map((conv) =>
-            conv.id === conversation.id ? { ...conv, title } : conv
-          )
+          prev.map((conv) => (conv.id === conversation!.id ? { ...conv, title } : conv))
         )
-        setCurrentConversation((prev) =>
-          prev ? { ...prev, title } : prev
-        )
+        setCurrentConversation((prev) => (prev ? { ...prev, title } : prev))
+        // (opcional) você pode também chamar um endpoint PATCH para persistir o título no backend
       }
     } catch (error) {
       console.error("Error sending message:", error)
+      // remove mensagem temporária em caso de erro
       setMessages((prev) => prev.filter((m) => m.id !== userMessage.id))
       toast({
         title: "Erro",
         description: "Não foi possível enviar a mensagem.",
         variant: "destructive",
-        className: "text-white",
       })
     } finally {
       setIsSending(false)
     }
   }
 
+  // =============================
+  // RENDER
+  // =============================
 
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Spinner className="h-8 w-8" />
+        <div className="glass-strong p-8 rounded-3xl">
+          <Spinner className="h-8 w-8" />
+        </div>
       </div>
     )
   }
@@ -223,7 +237,19 @@ export default function ChatPage() {
   if (!user) return null
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden relative">
+      {/* Fundo animado */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div
+          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-primary/10 blur-3xl animate-pulse"
+          style={{ animationDuration: "8s" }}
+        />
+        <div
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-accent/10 blur-3xl animate-pulse"
+          style={{ animationDuration: "10s", animationDelay: "2s" }}
+        />
+      </div>
+
       <ConversationSidebar
         conversations={conversations}
         currentConversationId={currentConversation?.id}
@@ -234,7 +260,7 @@ export default function ChatPage() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col relative z-10">
         <ChatHeader
           conversationTitle={currentConversation?.title}
           onNewChat={handleNewConversation}
@@ -244,20 +270,38 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto">
           {isLoadingMessages ? (
             <div className="flex h-full items-center justify-center">
-              <Spinner className="h-8 w-8" />
+              <div className="glass-strong p-8 rounded-3xl shimmer">
+                <Spinner className="h-8 w-8" />
+              </div>
             </div>
           ) : showWelcome && messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                {/* <img src="/logo.png" alt="Logo" className="mx-auto mb-4 w-32 h-32" />  ADICIONAR A LOGO AQUI FUTURAMENTE*/}
-                <h2 className="text-2xl font-semibold mb-2">Bem-vindo!</h2>
-                <p className="text-muted-foreground">
-                  Digite uma mensagem abaixo para começar a conversar
+            <div className="flex h-full items-center justify-center p-4">
+              <div className="text-center max-w-2xl">
+                <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-accent shadow-2xl glow shimmer">
+                  <Bug className="h-12 w-12 text-primary-foreground" />
+                </div>
+                <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+                  Bem-vindo ao Debug.AI!
+                </h2>
+                <p className="text-lg text-muted-foreground mb-8">
+                  Seu assistente virtual em Maker No-Code
                 </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                  {[
+                    { icon: "💡", text: "Faça perguntas" },
+                    { icon: "🎨", text: "Crie fluxos" },
+                    { icon: "🚀", text: "Explore possibilidades" },
+                  ].map((item, i) => (
+                    <div key={i} className="glass p-6 rounded-2xl glass-hover">
+                      <div className="text-4xl mb-3">{item.icon}</div>
+                      <p className="text-sm font-medium">{item.text}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-4xl p-4">
               {messages.map((message) => (
                 <ChatMessage
                   key={message.id}
@@ -271,7 +315,11 @@ export default function ChatPage() {
           )}
         </div>
 
-        <ChatInput onSend={handleSendMessage} disabled={isSending} />
+        <div className="p-4">
+          <div className="mx-auto max-w-4xl">
+            <ChatInput onSend={handleSendMessage} disabled={isSending} />
+          </div>
+        </div>
       </div>
     </div>
   )

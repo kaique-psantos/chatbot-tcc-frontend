@@ -10,9 +10,9 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "AI Chatbot",
-  description: "Converse com inteligência artificial",
-  generator: "v0.app",
+  title: "Debug.AI",
+  description: "Converse com inteligência artificial especialista em Maker No-Code",
+  generator: "kaique-psantos",
 }
 
 export default function RootLayout({
